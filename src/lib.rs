@@ -60,7 +60,7 @@ use std::iter;
 /// ```
 ///
 /// ## Getting a sorted vector of occurences
-/// This can be build by using Iterators or using [sorted_occurences].
+/// This can be build by using Iterators or using [`Histogram::sorted_occurrences()`].
 /// ```rust
 /// use std::cmp::Reverse;
 /// use histongram::Histogram;
@@ -197,8 +197,10 @@ impl<K: Hash + Eq> Histogram<K> {
     pub fn iter_rel(&self) -> impl Iterator<Item = (&K, f64)> {
         // If the counts get to big rounding is fine here.
         #[allow(clippy::cast_precision_loss)]
-        let total = self.num_instances() as f64;
-        self.iter().map(move |(k, cnt)| (k, cnt as f64 / total))
+        {
+            let total = self.num_instances() as f64;
+            self.iter().map(move |(k, cnt)| (k, cnt as f64 / total))
+        }
     }
 
     /// Get a vector of `key`s and `count`s sorted descending by `count`.
@@ -218,7 +220,8 @@ impl<K: Hash + Eq> Histogram<K> {
     #[must_use]
     pub fn sorted_occurrences(self) -> Vec<(K, usize)> {
         let mut counts: Vec<_> = self.into_iter().collect();
-        counts.sort_by_key(|(_key, cnt)| Reverse(*cnt));
+        // NOTE: unstable is okay here, as the map order is already arbitrary
+        counts.sort_unstable_by_key(|(_key, cnt)| Reverse(*cnt));
         counts
     }
 }
