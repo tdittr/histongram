@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter;
 
+use fxhash::FxHashMap;
+
 /// A histogram that counts occurrences of `key`s.
 ///
 /// # Examples
@@ -77,7 +79,7 @@ use std::iter;
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Histogram<K: Hash + Eq> {
-    map: HashMap<K, usize>,
+    map: FxHashMap<K, usize>,
 }
 
 impl<K: Hash + Eq> Histogram<K> {
@@ -85,7 +87,7 @@ impl<K: Hash + Eq> Histogram<K> {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 
