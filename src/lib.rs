@@ -294,6 +294,18 @@ impl<K: Hash + Eq, H: BuildHasher> IntoIterator for Histogram<K, H> {
     }
 }
 
+impl<K: Hash + Eq, H: BuildHasher> From<HashMap<K, usize, H>> for Histogram<K, H> {
+    fn from(map: HashMap<K, usize, H>) -> Self {
+        Self { map }
+    }
+}
+
+impl<K: Hash + Eq, H: BuildHasher> From<Histogram<K, H>> for HashMap<K, usize, H> {
+    fn from(hist: Histogram<K, H>) -> Self {
+        hist.map
+    }
+}
+
 #[cfg(feature = "serde")]
 mod serde {
     use std::collections::HashMap;
