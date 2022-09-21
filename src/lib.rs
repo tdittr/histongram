@@ -129,6 +129,14 @@ impl<K: Hash + Eq> Histogram<K> {
         *cnt += 1;
     }
 
+    /// Add all the occurrences from `other` to self
+    pub fn append(&mut self, other: Self) {
+        for (key, cnt) in other {
+            let old = self.map.entry(key).or_default();
+            *old += cnt;
+        }
+    }
+
     /// Get the number of times `key` was added to this histogram
     ///
     /// Returns `0` for absent `key`s.

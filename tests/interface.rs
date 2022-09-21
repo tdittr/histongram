@@ -76,3 +76,22 @@ fn all_the_counts() {
     let h: Histogram<_> = "aaabbc".chars().collect();
     assert_eq!(h.sorted_occurrences(), vec![('a', 3), ('b', 2), ('c', 1)]);
 }
+
+#[test]
+fn appending() {
+    let mut hist = Histogram::from_iter(["a", "a", "b"]);
+
+    assert_eq!(hist.count(&"a"), 2);
+    assert_eq!(hist.count(&"b"), 1);
+
+    hist.append(hist.clone());
+
+    assert_eq!(hist.count(&"a"), 4);
+    assert_eq!(hist.count(&"b"), 2);
+    assert_eq!(hist.count(&"c"), 0);
+
+    let other = Histogram::from_iter(["c"; 15]);
+
+    hist.append(other);
+    assert_eq!(hist.count(&"c"), 15);
+}
