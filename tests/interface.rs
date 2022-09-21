@@ -1,4 +1,5 @@
 use histongram::Histogram;
+use std::collections::hash_map::RandomState;
 
 #[test]
 fn simple() {
@@ -79,7 +80,7 @@ fn all_the_counts() {
 
 #[test]
 fn appending() {
-    let mut hist = Histogram::from_iter(["a", "a", "b"]);
+    let mut hist = ["a", "a", "b"].into_iter().collect::<Histogram<_>>();
 
     assert_eq!(hist.count(&"a"), 2);
     assert_eq!(hist.count(&"b"), 1);
@@ -94,4 +95,11 @@ fn appending() {
 
     hist.append(other);
     assert_eq!(hist.count(&"c"), 15);
+}
+
+#[test]
+fn strong_hash() {
+    let mut h = Histogram::with_hasher(RandomState::new());
+    h.add("foo");
+    assert_eq!(h.count(&"foo"), 1);
 }

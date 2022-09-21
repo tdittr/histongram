@@ -4,10 +4,13 @@
 use std::cmp::Reverse;
 use std::collections::hash_map;
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 use std::iter;
 
-use fxhash::FxHashMap;
+#[cfg(feature = "fxhash")]
+type DefaultHasher = fxhash::FxBuildHasher;
+#[cfg(not(feature = "fxhash"))]
+type DefaultHasher = hash_map::RandomState;
 
 /// A histogram that counts occurrences of `key`s.
 ///
@@ -78,16 +81,24 @@ use fxhash::FxHashMap;
 /// ]);
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Histogram<K: Hash + Eq> {
-    map: FxHashMap<K, usize>,
+pub struct Histogram<K: Hash + Eq, H: BuildHasher = DefaultHasher> {
+    map: HashMap<K, usize, H>,
 }
 
-impl<K: Hash + Eq> Histogram<K> {
+impl<K: Hash + Eq> Histogram<K, DefaultHasher> {
     /// Create a new empty `Histogram`
     #[must_use]
     pub fn new() -> Self {
         Self {
-            map: FxHashMap::default(),
+            map: HashMap::default(),
+        }
+    }
+}
+
+impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
+    pub fn with_hasher(hash_builder: H) -> Self {
+        Self {
+            map: HashMap::with_hasher(hash_builder),
         }
     }
 
@@ -229,13 +240,15 @@ impl<K: Hash + Eq> Histogram<K> {
 }
 
 // This can not be derived as it would then only be available if `K: Default` which we don't need here.
-impl<K: Hash + Eq> Default for Histogram<K> {
+impl<K: Hash + Eq, H: BuildHasher + Default> Default for Histogram<K, H> {
     fn default() -> Self {
-        Self::new()
+        Self {
+            map: HashMap::default(),
+        }
     }
 }
 
-impl<K: Hash + Eq> Extend<K> for Histogram<K> {
+impl<K: Hash + Eq, H: BuildHasher> Extend<K> for Histogram<K, H> {
     fn extend<T: IntoIterator<Item = K>>(&mut self, iter: T) {
         for item in iter {
             self.add(item);
@@ -243,15 +256,21 @@ impl<K: Hash + Eq> Extend<K> for Histogram<K> {
     }
 }
 
-impl<K: Hash + Eq> FromIterator<K> for Histogram<K> {
+impl<K, H> FromIterator<K> for Histogram<K, H>
+where
+    K: Hash + Eq,
+    H: BuildHasher + Default,
+{
     fn from_iter<T: IntoIterator<Item = K>>(iter: T) -> Self {
-        let mut h = Self::new();
+        let mut h = Self {
+            map: HashMap::with_hasher(Default::default()),
+        };
         h.extend(iter);
         h
     }
 }
 
-impl<'a, K: Hash + Eq + 'a> IntoIterator for &'a Histogram<K> {
+impl<'a, K: Hash + Eq + 'a, H: BuildHasher> IntoIterator for &'a Histogram<K, H> {
     type Item = (&'a K, usize);
     type IntoIter = iter::Map<hash_map::Iter<'a, K, usize>, fn((&'a K, &'a usize)) -> Self::Item>;
 
@@ -265,11 +284,47 @@ impl<'a, K: Hash + Eq + 'a> IntoIterator for &'a Histogram<K> {
     }
 }
 
-impl<K: Hash + Eq> IntoIterator for Histogram<K> {
+impl<K: Hash + Eq, H: BuildHasher> IntoIterator for Histogram<K, H> {
     type Item = (K, usize);
     type IntoIter = hash_map::IntoIter<K, usize>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.map.into_iter()
+    }
+}
+
+#[cfg(feature = "serde")]
+pub mod serde {
+    use super::Histogram;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::collections::HashMap;
+    use std::hash::{BuildHasher, Hash};
+
+    impl<K, H> Serialize for Histogram<K, H>
+    where
+        K: Hash + Eq + Serialize,
+        H: BuildHasher,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.map.serialize(serializer)
+        }
+    }
+
+    impl<'de, K, H> Deserialize<'de> for Histogram<K, H>
+    where
+        K: Hash + Eq + Deserialize<'de>,
+        H: BuildHasher + Default,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            Ok(Self {
+                map: HashMap::deserialize(deserializer)?,
+            })
+        }
     }
 }
