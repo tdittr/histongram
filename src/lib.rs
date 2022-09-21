@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::cmp::Reverse;
 use std::collections::hash_map;
@@ -294,12 +295,15 @@ impl<K: Hash + Eq, H: BuildHasher> IntoIterator for Histogram<K, H> {
 }
 
 #[cfg(feature = "serde")]
-pub mod serde {
-    use super::Histogram;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+mod serde {
     use std::collections::HashMap;
     use std::hash::{BuildHasher, Hash};
 
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::Histogram;
+
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<K, H> Serialize for Histogram<K, H>
     where
         K: Hash + Eq + Serialize,
@@ -313,6 +317,7 @@ pub mod serde {
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<'de, K, H> Deserialize<'de> for Histogram<K, H>
     where
         K: Hash + Eq + Deserialize<'de>,
