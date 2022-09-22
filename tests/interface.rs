@@ -1,5 +1,6 @@
-use histongram::Histogram;
 use std::collections::hash_map::RandomState;
+
+use histongram::{DefaultHasher, Histogram};
 
 #[test]
 fn simple() {
@@ -7,15 +8,15 @@ fn simple() {
     assert_eq!(h.num_categories(), 0);
     assert_eq!(h.num_instances(), 0);
 
-    h.add("a");
+    h.add_owned("a");
     assert_eq!(h.num_categories(), 1);
     assert_eq!(h.num_instances(), 1);
 
-    h.add("a");
+    h.add_ref(&"a");
     assert_eq!(h.num_categories(), 1);
     assert_eq!(h.num_instances(), 2);
 
-    h.add("b");
+    h.add_owned("b");
     assert_eq!(h.num_categories(), 2);
     assert_eq!(h.num_instances(), 3);
 
@@ -25,8 +26,17 @@ fn simple() {
 }
 
 #[test]
+fn also_works_with_copy_types() {
+    let mut h = Histogram::new();
+    h.extend_from_owned("aaabbc".chars());
+
+    assert_eq!(h.count(&'a'), 3);
+    assert_eq!(h.count_rel(&'a'), 0.5);
+}
+
+#[test]
 fn iterating() {
-    let mut h: Histogram<_> = "aaabbc".chars().collect();
+    let mut h = Histogram::<_, DefaultHasher>::from_owned_iter("aaabbc".chars());
 
     assert_eq!(h.num_categories(), 3);
     assert_eq!(h.num_instances(), 6);
@@ -58,7 +68,7 @@ fn iterating() {
         }
     }
 
-    h.extend("abc".chars());
+    h.extend_from_owned("abc".chars());
     assert_eq!(h.num_categories(), 3);
     assert_eq!(h.num_instances(), 9);
 
@@ -74,13 +84,15 @@ fn iterating() {
 
 #[test]
 fn all_the_counts() {
-    let h: Histogram<_> = "aaabbc".chars().collect();
+    let h = Histogram::<_, DefaultHasher>::from_owned_iter("aaabbc".chars());
     assert_eq!(h.sorted_occurrences(), vec![('a', 3), ('b', 2), ('c', 1)]);
 }
 
 #[test]
 fn appending() {
-    let mut hist = ["a", "a", "b"].into_iter().collect::<Histogram<_>>();
+    let mut hist = ["a", "a", "b"]
+        .into_iter()
+        .collect::<Histogram<&'static str>>();
 
     assert_eq!(hist.count(&"a"), 2);
     assert_eq!(hist.count(&"b"), 1);
@@ -100,6 +112,6 @@ fn appending() {
 #[test]
 fn strong_hash() {
     let mut h = Histogram::with_hasher(RandomState::new());
-    h.add("foo");
+    h.add_owned("foo");
     assert_eq!(h.count(&"foo"), 1);
 }

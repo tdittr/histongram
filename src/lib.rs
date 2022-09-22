@@ -1,17 +1,23 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
+#![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+//! A small crate for younting n-grams
+
+use std::borrow::Borrow;
 use std::cmp::Reverse;
-use std::collections::hash_map;
-use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash};
 use std::iter;
 
+use hashbrown::hash_map;
+use hashbrown::HashMap;
+
+/// The Hasher used by default for new Histograms
 #[cfg(feature = "fxhash")]
-type DefaultHasher = fxhash::FxBuildHasher;
+pub type DefaultHasher = fxhash::FxBuildHasher;
 #[cfg(not(feature = "fxhash"))]
-type DefaultHasher = hash_map::RandomState;
+pub type DefaultHasher = hash_map::RandomState;
 
 /// A histogram that counts occurrences of `key`s.
 ///
@@ -21,30 +27,30 @@ type DefaultHasher = hash_map::RandomState;
 /// ```rust
 /// use histongram::Histogram;
 ///
-/// let mut hist = Histogram::new();
+/// let mut hist = Histogram::<String>::new();
 ///
-/// hist.add('a');
-/// assert_eq!(hist.count(&'a'), 1);
-/// assert_eq!(hist.count(&'b'), 0);
+/// hist.add_ref("a");
+/// assert_eq!(hist.count("a"), 1);
+/// assert_eq!(hist.count("b"), 0);
 /// ```
 ///
 /// ## Filling from Iterators
 /// ```rust
 /// use histongram::Histogram;
-/// let mut hist: Histogram<_> = ["a", "a", "a"].into_iter().collect();
+/// let mut hist: Histogram<String> = ["a", "a", "a"].into_iter().collect();
 ///
-/// assert_eq!(hist.count(&"a"), 3);
+/// assert_eq!(hist.count("a"), 3);
 ///
 /// hist.extend(["a", "b", "c"]);
-/// assert_eq!(hist.count(&"a"), 4);
-/// assert_eq!(hist.count(&"b"), 1);
-/// assert_eq!(hist.count(&"c"), 1);
+/// assert_eq!(hist.count("a"), 4);
+/// assert_eq!(hist.count("b"), 1);
+/// assert_eq!(hist.count("c"), 1);
 /// ```
 ///
 /// ## Iterating the counts
 /// ```rust
 /// use histongram::Histogram;
-/// let hist: Histogram<_> = ["a", "a", "a"].into_iter().collect();
+/// let hist: Histogram<String> = ["a", "a", "a"].into_iter().collect();
 ///
 /// // NOTE: The order is arbitrary for multiple items
 ///
@@ -60,7 +66,7 @@ type DefaultHasher = hash_map::RandomState;
 ///
 /// // This consumes hist but gives back ownership of the keys
 /// for (key, cnt) in hist {
-///     assert_eq!(key, "a");
+///     assert_eq!(key, "a".to_string());
 ///     assert_eq!(cnt, 3);
 /// }
 /// ```
@@ -70,15 +76,15 @@ type DefaultHasher = hash_map::RandomState;
 /// ```rust
 /// use std::cmp::Reverse;
 /// use histongram::Histogram;
-/// let hist: Histogram<_> = "aaaxxzzzzz".chars().collect();
+/// let hist: Histogram<String> = ["a","a","a","x","x","z","z","z","z","z"].into_iter().collect();
 ///
 /// let mut counts: Vec<_> = hist.into_iter().collect();
 /// counts.sort_by_key(|(_key, cnt)| Reverse(*cnt));
 ///
 /// assert_eq!(counts, vec![
-///     ('z', 5),
-///     ('a', 3),
-///     ('x', 2),
+///     ("z".to_string(), 5),
+///     ("a".to_string(), 3),
+///     ("x".to_string(), 2),
 /// ]);
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -97,7 +103,10 @@ impl<K: Hash + Eq> Histogram<K, DefaultHasher> {
 }
 
 impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
-    pub fn with_hasher(hash_builder: H) -> Self {
+    /// Create a new Histogram using the given `hash_builder`
+    ///
+    /// This allows you to use different hashing algorithms that might fit your use-case better.
+    pub const fn with_hasher(hash_builder: H) -> Self {
         Self {
             map: HashMap::with_hasher(hash_builder),
         }
@@ -110,9 +119,9 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     /// # use histongram::Histogram;
     /// let mut hist = Histogram::new();
     ///
-    /// hist.add("abc");
-    /// hist.add("abc");
-    /// hist.add("other");
+    /// hist.add_owned("abc");
+    /// hist.add_owned("abc");
+    /// hist.add_owned("other");
     /// assert_eq!(hist.num_categories(), 2);
     /// ```
     #[must_use]
@@ -127,9 +136,9 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     /// # use histongram::Histogram;
     /// let mut hist = Histogram::new();
     ///
-    /// hist.add("abc");
-    /// hist.add("abc");
-    /// hist.add("other");
+    /// hist.add_owned("abc");
+    /// hist.add_owned("abc");
+    /// hist.add_owned("other");
     /// assert_eq!(hist.num_instances(), 3);
     /// ```
     #[must_use]
@@ -137,10 +146,59 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
         self.map.values().sum()
     }
 
-    /// Add a new occurrence of `key`  
-    pub fn add(&mut self, val: K) {
-        let cnt = self.map.entry(val).or_default();
+    /// Add a new occurence of `key` to the Histogram
+    ///
+    /// The value will be turned into an owned `K` if it is not yet present using [`From<&Q>`]. This
+    /// is useful for example if you want to construct a `'static` Histogram from slices out of a
+    /// buffer (See example below). As you do not have to create new [`String`] instances if the key
+    /// is already present in the Histogram.
+    ///
+    /// See also [`Histogram::extend()`]
+    ///
+    /// # Examples
+    /// ```rust
+    /// use histongram::Histogram;
+    /// let mut hist = Histogram::<String>::new();
+    ///
+    /// // During reading the file
+    /// {
+    ///     let my_local_buffer = "Hello world! Moin! Goedemiddag! Hoi! Moin!";
+    ///     for word in my_local_buffer.split_whitespace() {
+    ///         hist.add_ref(word);
+    ///     }
+    /// }
+    /// // my_local_bufer is now dropped
+    ///
+    /// // But the Histogram has owned Strings with copies of the words
+    /// assert_eq!(hist.count("Moin!"), 2);
+    /// assert_eq!(hist.count("Hoi!"), 1);
+    /// ```
+    pub fn add_ref<'a, Q>(&mut self, val: &'a Q)
+    where
+        K: Borrow<Q> + From<&'a Q>,
+        Q: ?Sized + Hash + Eq,
+    {
+        let cnt = self.map.entry_ref(val).or_insert(0);
         *cnt += 1;
+    }
+
+    /// Add a new occurrence of `key` where ownership of the key moves to the Histogram
+    ///
+    /// This is useful for types that do not implement [`From<&Self>`] as [`hashbrown`] requires the
+    /// use of the [`From<T>`] for its API.
+    pub fn add_owned(&mut self, val: K) {
+        let cnt = self.map.entry(val).or_insert(0);
+        *cnt += 1;
+    }
+
+    /// Extend this Histogram by counting owned instances of `K`
+    ///
+    /// This is similar to [`Histogram::extend()`] but taking owned instances instead of references.
+    /// It is useful for types that are cheap to clone, such as types that implement [`Copy`].
+    pub fn extend_from_owned<I: IntoIterator<Item = K>>(&mut self, iter: I) {
+        for item in iter {
+            self.add_owned(item);
+        }
     }
 
     /// Add all the occurrences from `other` to self
@@ -158,13 +216,17 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     /// # Example
     /// ```rust
     /// # use histongram::Histogram;
-    /// let mut hist = Histogram::new();
+    /// let mut hist = Histogram::<String>::new();
     ///
-    /// hist.add("present");
-    /// assert_eq!(hist.count(&"present"), 1);
-    /// assert_eq!(hist.count(&"absent"), 0);
+    /// hist.add_ref("present");
+    /// assert_eq!(hist.count("present"), 1);
+    /// assert_eq!(hist.count("absent"), 0);
     /// ```
-    pub fn count(&self, key: &K) -> usize {
+    pub fn count<Q>(&self, key: &Q) -> usize
+    where
+        Q: ?Sized + Hash + Eq,
+        K: Borrow<Q>,
+    {
         self.map.get(key).copied().unwrap_or(0)
     }
 
@@ -176,13 +238,17 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     /// # Example
     /// ```rust
     /// # use histongram::Histogram;
-    /// let mut hist = Histogram::new();
+    /// let mut hist = Histogram::<String>::new();
     ///
-    /// hist.add("present");
-    /// assert_eq!(hist.count_rel(&"present"), 1.0);
-    /// assert_eq!(hist.count_rel(&"absent"), 0.0);
+    /// hist.add_ref("present");
+    /// assert_eq!(hist.count_rel("present"), 1.0);
+    /// assert_eq!(hist.count_rel("absent"), 0.0);
     /// ```
-    pub fn count_rel(&self, key: &K) -> f64 {
+    pub fn count_rel<Q>(&self, key: &Q) -> f64
+    where
+        Q: ?Sized + Hash + Eq,
+        K: Borrow<Q>,
+    {
         let total = self.num_instances();
         if total == 0 {
             // There are no instances, so `key` can also not be in the list
@@ -223,7 +289,7 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     ///
     /// ```rust
     /// use histongram::Histogram;
-    /// let hist: Histogram<_> = "aaaxxzzzzz".chars().collect();
+    /// let hist: Histogram<_> = Histogram::from_owned_iter("aaaxxzzzzz".chars());
     ///
     /// assert_eq!(hist.sorted_occurrences(), vec![
     ///     ('z', 5),
@@ -240,6 +306,22 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     }
 }
 
+impl<K: Hash + Eq, H: BuildHasher + Default> Histogram<K, H> {
+    /// Create a new Histogram by counting owned instanes of `K` in `iter`.
+    ///
+    /// This is similar to [`Histogram::from_iter()`] but taking owned values instead of references.
+    ///
+    /// See also [`Histogram::extend_from_owned()`] for motivations.
+    pub fn from_owned_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = K>,
+    {
+        let mut h = Self::default();
+        h.extend_from_owned(iter);
+        h
+    }
+}
+
 // This can not be derived as it would then only be available if `K: Default` which we don't need here.
 impl<K: Hash + Eq, H: BuildHasher + Default> Default for Histogram<K, H> {
     fn default() -> Self {
@@ -249,20 +331,26 @@ impl<K: Hash + Eq, H: BuildHasher + Default> Default for Histogram<K, H> {
     }
 }
 
-impl<K: Hash + Eq, H: BuildHasher> Extend<K> for Histogram<K, H> {
-    fn extend<T: IntoIterator<Item = K>>(&mut self, iter: T) {
+impl<'a, K, H, Q> Extend<&'a Q> for Histogram<K, H>
+where
+    K: Hash + Eq + Borrow<Q> + From<&'a Q>,
+    H: BuildHasher,
+    Q: ?Sized + Hash + Eq + 'a,
+{
+    fn extend<T: IntoIterator<Item = &'a Q>>(&mut self, iter: T) {
         for item in iter {
-            self.add(item);
+            self.add_ref(item);
         }
     }
 }
 
-impl<K, H> FromIterator<K> for Histogram<K, H>
+impl<'a, K, H, Q> FromIterator<&'a Q> for Histogram<K, H>
 where
-    K: Hash + Eq,
+    K: Hash + Eq + Borrow<Q> + From<&'a Q>,
     H: BuildHasher + Default,
+    Q: ?Sized + Hash + Eq + 'a,
 {
-    fn from_iter<T: IntoIterator<Item = K>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = &'a Q>>(iter: T) -> Self {
         let mut h = Self {
             map: HashMap::with_hasher(Default::default()),
         };
@@ -308,9 +396,9 @@ impl<K: Hash + Eq, H: BuildHasher> From<Histogram<K, H>> for HashMap<K, usize, H
 
 #[cfg(feature = "serde")]
 mod serde {
-    use std::collections::HashMap;
     use std::hash::{BuildHasher, Hash};
 
+    use hashbrown::HashMap;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     use super::Histogram;
