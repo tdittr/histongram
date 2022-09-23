@@ -94,8 +94,8 @@ use hashbrown::HashMap;
 /// assert_eq!(hist.count("foo"), 1);
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Histogram<K: Hash + Eq, H: BuildHasher = DefaultHashBuilder> {
-    map: HashMap<K, usize, H>,
+pub struct Histogram<K: Hash + Eq, S: BuildHasher = DefaultHashBuilder> {
+    map: HashMap<K, usize, S>,
 }
 
 impl<K: Hash + Eq> Histogram<K, DefaultHashBuilder> {
@@ -108,11 +108,11 @@ impl<K: Hash + Eq> Histogram<K, DefaultHashBuilder> {
     }
 }
 
-impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
+impl<K: Hash + Eq, S: BuildHasher> Histogram<K, S> {
     /// Create a new Histogram using the given `hash_builder`
     ///
     /// This allows you to use different hashing algorithms that might fit your use-case better.
-    pub const fn with_hasher(hash_builder: H) -> Self {
+    pub const fn with_hasher(hash_builder: S) -> Self {
         Self {
             map: HashMap::with_hasher(hash_builder),
         }
@@ -312,7 +312,7 @@ impl<K: Hash + Eq, H: BuildHasher> Histogram<K, H> {
     }
 }
 
-impl<K: Hash + Eq, H: BuildHasher + Default> Histogram<K, H> {
+impl<K: Hash + Eq, S: BuildHasher + Default> Histogram<K, S> {
     /// Create a new Histogram by counting owned instanes of `K` in `iter`.
     ///
     /// This is similar to [`Histogram::from_iter()`] but taking owned values instead of references.
@@ -329,7 +329,7 @@ impl<K: Hash + Eq, H: BuildHasher + Default> Histogram<K, H> {
 }
 
 // This can not be derived as it would then only be available if `K: Default` which we don't need here.
-impl<K: Hash + Eq, H: BuildHasher + Default> Default for Histogram<K, H> {
+impl<K: Hash + Eq, S: BuildHasher + Default> Default for Histogram<K, S> {
     fn default() -> Self {
         Self {
             map: HashMap::default(),
@@ -337,11 +337,11 @@ impl<K: Hash + Eq, H: BuildHasher + Default> Default for Histogram<K, H> {
     }
 }
 
-impl<'a, K, H, Q> Extend<&'a Q> for Histogram<K, H>
+impl<'a, K, S, Q> Extend<&'a Q> for Histogram<K, S>
 where
     K: Hash + Eq + Borrow<Q> + From<&'a Q>,
-    H: BuildHasher,
     Q: ?Sized + Hash + Eq + 'a,
+    S: BuildHasher,
 {
     fn extend<T: IntoIterator<Item = &'a Q>>(&mut self, iter: T) {
         for item in iter {
@@ -350,11 +350,11 @@ where
     }
 }
 
-impl<'a, K, H, Q> FromIterator<&'a Q> for Histogram<K, H>
+impl<'a, K, S, Q> FromIterator<&'a Q> for Histogram<K, S>
 where
     K: Hash + Eq + Borrow<Q> + From<&'a Q>,
-    H: BuildHasher + Default,
     Q: ?Sized + Hash + Eq + 'a,
+    S: BuildHasher + Default,
 {
     fn from_iter<T: IntoIterator<Item = &'a Q>>(iter: T) -> Self {
         let mut h = Self {
@@ -365,7 +365,7 @@ where
     }
 }
 
-impl<'a, K: Hash + Eq + 'a, H: BuildHasher> IntoIterator for &'a Histogram<K, H> {
+impl<'a, K: Hash + Eq + 'a, S: BuildHasher> IntoIterator for &'a Histogram<K, S> {
     type Item = (&'a K, usize);
     type IntoIter = iter::Map<hash_map::Iter<'a, K, usize>, fn((&'a K, &'a usize)) -> Self::Item>;
 
@@ -379,7 +379,7 @@ impl<'a, K: Hash + Eq + 'a, H: BuildHasher> IntoIterator for &'a Histogram<K, H>
     }
 }
 
-impl<K: Hash + Eq, H: BuildHasher> IntoIterator for Histogram<K, H> {
+impl<K: Hash + Eq, S: BuildHasher> IntoIterator for Histogram<K, S> {
     type Item = (K, usize);
     type IntoIter = hash_map::IntoIter<K, usize>;
 
@@ -388,8 +388,8 @@ impl<K: Hash + Eq, H: BuildHasher> IntoIterator for Histogram<K, H> {
     }
 }
 
-impl<K: Hash + Eq, H: BuildHasher> From<HashMap<K, usize, H>> for Histogram<K, H> {
-    fn from(map: HashMap<K, usize, H>) -> Self {
+impl<K: Hash + Eq, S: BuildHasher> From<HashMap<K, usize, S>> for Histogram<K, S> {
+    fn from(map: HashMap<K, usize, S>) -> Self {
         Self { map }
     }
 }
@@ -410,24 +410,24 @@ mod serde {
     use super::Histogram;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
-    impl<K, H> Serialize for Histogram<K, H>
+    impl<K, S> Serialize for Histogram<K, S>
     where
         K: Hash + Eq + Serialize,
-        H: BuildHasher,
+        S: BuildHasher,
     {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
         where
-            S: Serializer,
+            Ser: Serializer,
         {
             self.map.serialize(serializer)
         }
     }
 
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
-    impl<'de, K, H> Deserialize<'de> for Histogram<K, H>
+    impl<'de, K, S> Deserialize<'de> for Histogram<K, S>
     where
         K: Hash + Eq + Deserialize<'de>,
-        H: BuildHasher + Default,
+        S: BuildHasher + Default,
     {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
