@@ -106,6 +106,42 @@ impl<K: Hash + Eq> Histogram<K, DefaultHashBuilder> {
             map: HashMap::default(),
         }
     }
+
+    /// Collect the counts from `iter` into a new `Histogram`
+    ///
+    /// This can be useful if you already counted occurences and just want to analyze it using
+    /// `Histogram`.
+    ///
+    /// # Example
+    /// ## Create from `std::collections::HashMap`
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use histongram::Histogram;
+    ///
+    /// let counts = HashMap::from([
+    ///     ("foo", 5),
+    ///     ("bar", 2),
+    ///     ("baz", 3),
+    /// ]);
+    ///
+    /// let hist = Histogram::from_counts(counts);
+    /// assert_eq!(hist.num_instances(), 10);
+    /// ```
+    ///
+    /// ## Create from raw counts
+    /// ```rust
+    /// use histongram::Histogram;
+    ///
+    /// let hist = Histogram::from_counts([
+    ///     ("foo", 5),
+    ///     ("bar", 2),
+    ///     ("baz", 3),
+    /// ]);
+    /// assert_eq!(hist.num_instances(), 10);
+    /// ```
+    pub fn from_counts(iter: impl IntoIterator<Item = (K, usize)>) -> Self {
+        HashMap::from_iter(iter).into()
+    }
 }
 
 impl<K: Hash + Eq, S: BuildHasher> Histogram<K, S> {
@@ -309,6 +345,31 @@ impl<K: Hash + Eq, S: BuildHasher> Histogram<K, S> {
         // NOTE: unstable is okay here, as the map order is already arbitrary
         counts.sort_unstable_by_key(|(_key, cnt)| Reverse(*cnt));
         counts
+    }
+
+    /// Turn this histogram into a [`HashMap`](`std::collections::HashMap`) from `std`
+    ///
+    /// This can be useful if you do not want to use another `HashMap` such as
+    /// [`hashbrown::HashMap`] in your code base. Or you already have a `struct` containing
+    /// `std::collections::HashMap`s.
+    ///
+    /// # Example
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use histongram::Histogram;
+    ///
+    /// struct MyStruct {
+    ///     counts: HashMap<String, usize>,
+    /// }
+    ///
+    /// let mut hist = Histogram::new();
+    /// hist.extend(["foo", "bar", "baz"]);
+    ///
+    /// let ms = MyStruct { counts: hist.into_std_hash_map() };
+    /// assert_eq!(ms.counts["foo"], 1);
+    /// ```
+    pub fn into_std_hash_map(self) -> std::collections::HashMap<K, usize> {
+        self.map.into_iter().collect()
     }
 }
 
