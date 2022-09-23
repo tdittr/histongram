@@ -2,7 +2,7 @@ use std::cmp::{min, Reverse};
 
 use insta::assert_ron_snapshot;
 
-use histongram::{DefaultHasher, Histogram};
+use histongram::{DefaultHashBuilder, Histogram};
 
 const APACHE: &str = include_str!("../LICENSE-APACHE");
 const MIT: &str = include_str!("../LICENSE-MIT");
@@ -27,7 +27,7 @@ fn license_words() {
 
 #[test]
 fn license_chars() {
-    let mut a = Histogram::<_, DefaultHasher>::from_owned_iter(APACHE.chars());
+    let mut a = Histogram::<_, DefaultHashBuilder>::from_owned_iter(APACHE.chars());
     let mut a_counts = a.clone().sorted_occurrences();
     sort_also_by_key(&mut a_counts);
     assert_ron_snapshot!(a_counts);
@@ -46,14 +46,18 @@ fn license_chars() {
 #[cfg(feature = "serde")]
 #[test]
 fn serde() {
-    let mut a = Histogram::<_, DefaultHasher>::from_owned_iter(APACHE.chars());
-    assert_ron_snapshot!(a);
+    let mut settings = insta::Settings::clone_current();
+    settings.set_sort_maps(true);
+    settings.bind(|| {
+        let mut a = Histogram::<_, DefaultHashBuilder>::from_owned_iter(APACHE.chars());
+        assert_ron_snapshot!(a);
 
-    let m = Histogram::<_, DefaultHasher>::from_owned_iter(MIT.chars());
-    assert_ron_snapshot!(m);
+        let m = Histogram::<_, DefaultHashBuilder>::from_owned_iter(MIT.chars());
+        assert_ron_snapshot!(m);
 
-    a.append(m);
-    assert_ron_snapshot!(a);
+        a.append(m);
+        assert_ron_snapshot!(a);
+    });
 }
 
 fn sort_also_by_key<K: Ord + Copy>(counts: &mut [(K, usize)]) {

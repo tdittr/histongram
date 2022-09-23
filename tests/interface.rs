@@ -1,6 +1,6 @@
 use std::collections::hash_map::RandomState;
 
-use histongram::{DefaultHasher, Histogram};
+use histongram::{DefaultHashBuilder, Histogram};
 
 #[test]
 fn simple() {
@@ -36,7 +36,7 @@ fn also_works_with_copy_types() {
 
 #[test]
 fn iterating() {
-    let mut h = Histogram::<_, DefaultHasher>::from_owned_iter("aaabbc".chars());
+    let mut h = Histogram::<_, DefaultHashBuilder>::from_owned_iter("aaabbc".chars());
 
     assert_eq!(h.num_categories(), 3);
     assert_eq!(h.num_instances(), 6);
@@ -84,7 +84,7 @@ fn iterating() {
 
 #[test]
 fn all_the_counts() {
-    let h = Histogram::<_, DefaultHasher>::from_owned_iter("aaabbc".chars());
+    let h = Histogram::<_, DefaultHashBuilder>::from_owned_iter("aaabbc".chars());
     assert_eq!(h.sorted_occurrences(), vec![('a', 3), ('b', 2), ('c', 1)]);
 }
 

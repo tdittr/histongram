@@ -3,7 +3,7 @@
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! A small crate for younting n-grams
+//! A small crate for counting n-grams
 
 use std::borrow::Borrow;
 use std::cmp::Reverse;
@@ -11,13 +11,8 @@ use std::hash::{BuildHasher, Hash};
 use std::iter;
 
 use hashbrown::hash_map;
+pub use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::HashMap;
-
-/// The Hasher used by default for new Histograms
-#[cfg(feature = "fxhash")]
-pub type DefaultHasher = fxhash::FxBuildHasher;
-#[cfg(not(feature = "fxhash"))]
-pub type DefaultHasher = hash_map::RandomState;
 
 /// A histogram that counts occurrences of `key`s.
 ///
@@ -87,12 +82,23 @@ pub type DefaultHasher = hash_map::RandomState;
 ///     ("x".to_string(), 2),
 /// ]);
 /// ```
+///
+/// ## Using a pre-allocated `hashbrown::HashMap`
+/// ```rust
+/// use hashbrown::HashMap;
+/// use histongram::Histogram;
+///
+/// let mut hist: Histogram<_> = HashMap::<String, usize>::with_capacity(100).into();
+///
+/// hist.add_ref("foo");
+/// assert_eq!(hist.count("foo"), 1);
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Histogram<K: Hash + Eq, H: BuildHasher = DefaultHasher> {
+pub struct Histogram<K: Hash + Eq, H: BuildHasher = DefaultHashBuilder> {
     map: HashMap<K, usize, H>,
 }
 
-impl<K: Hash + Eq> Histogram<K, DefaultHasher> {
+impl<K: Hash + Eq> Histogram<K, DefaultHashBuilder> {
     /// Create a new empty `Histogram`
     #[must_use]
     pub fn new() -> Self {
