@@ -12,7 +12,7 @@ fn simple() {
     assert_eq!(h.num_categories(), 1);
     assert_eq!(h.num_instances(), 1);
 
-    h.add_ref(&"a");
+    h.add_ref("a");
     assert_eq!(h.num_categories(), 1);
     assert_eq!(h.num_instances(), 2);
 
