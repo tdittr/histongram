@@ -16,6 +16,9 @@ authors = [
 default = []
 serde = ["dep:serde", "hashbrown/serde"]
 
+[workspace]
+members = ["python"]
+
 [dependencies]
 hashbrown = "0.12.3"
 serde = { version = "1", optional = true }
