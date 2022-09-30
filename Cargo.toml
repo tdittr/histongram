@@ -1,16 +1,21 @@
-[package]
-name = "histongram"
+[workspace]
+members = ["python"]
+
+[workspace.package]
 version = "0.2.1"
 edition = "2021"
-
-description = "A small crate for counting n-grams"
-
 license = "MIT OR Apache-2.0"
-
+authors = ["tdittr <td-github@orangecar.org"]
 repository = "https://github.com/tdittr/histongram"
-authors = [
-    "tdittr <td-github@orangecar.org",
-]
+
+[package]
+name = "histongram"
+description = "A small crate for counting n-grams"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 [features]
 default = []
@@ -26,7 +31,6 @@ criterion = "0.4.0"
 ahash = "0.8.0"
 compact_str = "0.6.1"
 rustc-hash = "1.1.0"
-
 
 [[bench]]
 name = "histogram"
