@@ -9,6 +9,9 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
 ]
 
-
+[tool.maturin]
+sdist-include = ["LICENSE-APACHE", "LICENSE-MIT", "README.md"]
