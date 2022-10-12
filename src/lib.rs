@@ -8,4 +8,5 @@
 pub use histogram::{DefaultHashBuilder, Histogram};
 
 mod histogram;
+mod ngrams;
 pub mod tokens;
