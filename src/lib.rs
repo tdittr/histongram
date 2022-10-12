@@ -5,5 +5,6 @@
 
 //! A small crate for counting n-grams
 
+pub use histogram::{DefaultHashBuilder, Histogram};
+
 mod histogram;
-pub use histogram::Histogram;

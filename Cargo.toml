@@ -19,11 +19,18 @@ repository.workspace = true
 
 [features]
 default = []
+cli = ["dep:clap", "dep:color-eyre", "dep:compact_str", "dep:itertools"]
 serde = ["dep:serde", "hashbrown/serde"]
 
 [dependencies]
 hashbrown = "0.12.3"
 serde = { version = "1", optional = true }
+
+# CLI dependencies
+clap = { version = "4.0.2", features = ["derive"], optional = true }
+color-eyre = { version = "0.6.2", optional = true }
+compact_str = { version = "0.6.1", optional = true }
+itertools = { version = "0.10.5", optional = true }
 
 [dev-dependencies]
 insta = { version = "1.20.0", features = ["ron"] }
@@ -35,6 +42,10 @@ rustc-hash = "1.1.0"
 [[bench]]
 name = "histogram"
 harness = false
+
+[[bin]]
+name = "histongram"
+required-features = ["cli"]
 
 # Inspired by tokio
 [package.metadata.docs.rs]

@@ -16,3 +16,7 @@ pydevelop:
 
 deps:
     pip install maturin pytest
+
+corpus:
+    mkdir -p corpus
+    cd corpus && wget "http://corpus.canterbury.ac.nz/resources/large.tar.gz" && tar -xzf large.tar.gz && rm -f large.tar.gz

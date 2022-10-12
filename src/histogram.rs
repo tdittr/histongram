@@ -1,9 +1,10 @@
-use hashbrown::hash_map::DefaultHashBuilder;
-use hashbrown::{hash_map, HashMap};
 use std::borrow::Borrow;
 use std::cmp::Reverse;
 use std::hash::{BuildHasher, Hash};
 use std::iter;
+
+pub use hashbrown::hash_map::DefaultHashBuilder;
+use hashbrown::{hash_map, HashMap};
 
 /// A histogram that counts occurrences of `key`s.
 ///
@@ -85,6 +86,7 @@ use std::iter;
 /// assert_eq!(hist.count("foo"), 1);
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Histogram<K: Hash + Eq, S: BuildHasher = DefaultHashBuilder> {
     map: HashMap<K, usize, S>,
 }
