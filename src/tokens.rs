@@ -2,43 +2,51 @@
 
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroU32;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use compact_str::CompactString;
 use hashbrown::HashMap;
 
 type TokenId = NonZeroU32;
 
-// TODO: Make this optional with feature flag
-static NEXT_BUCKET_ID: AtomicU32 = AtomicU32::new(1);
+#[cfg(debug_assertions)]
+mod debug {
+    use std::num::NonZeroU32;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
-fn new_bucket_id() -> NonZeroU32 {
-    NEXT_BUCKET_ID
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
-            old.checked_add(1)
-        })
-        .expect("There will never be more that 2^32-1 TokenBuckets!")
-        .try_into()
-        .expect("NEXT_BUCKET_ID starts out at 1 and is thus non zero")
+    static NEXT_BUCKET_ID: AtomicU32 = AtomicU32::new(1);
+
+    pub fn new_bucket_id() -> NonZeroU32 {
+        NEXT_BUCKET_ID
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
+                old.checked_add(1)
+            })
+            .expect("There will never be more that 2^32-1 TokenBuckets!")
+            .try_into()
+            .expect("NEXT_BUCKET_ID starts out at 1 and is thus non zero")
+    }
 }
 
 /// A basic string interner turning strings into tokens
 #[derive(Debug)]
 pub struct TokenBucket {
     map: HashMap<CompactString, TokenId>,
+
+    #[cfg(debug_assertions)]
     bucket_id: NonZeroU32,
 }
 
 impl TokenBucket {
     /// Create a new empty `TokenBucket`
     ///
-    /// This creates a new unique id for this bucket which will ensure that tokens from one bucket
-    /// are not used with another bucket.
+    /// In debug builds this creates a new unique id for this bucket which will ensure that tokens
+    /// from one bucket are not used with another bucket.
     #[must_use]
     pub fn new() -> Self {
         Self {
             map: HashMap::default(),
-            bucket_id: new_bucket_id(),
+
+            #[cfg(debug_assertions)]
+            bucket_id: debug::new_bucket_id(),
         }
     }
 
@@ -54,6 +62,8 @@ impl TokenBucket {
 
         Token {
             id_in_bucket: *id,
+
+            #[cfg(debug_assertions)]
             bucket_id: self.bucket_id,
         }
     }
@@ -63,10 +73,11 @@ impl TokenBucket {
     /// This lookup is implemented as a linear search and thus has a complexity of `O(self.len())`.
     ///
     /// # Panics
-    /// Panics if the `token` did not originate from this `TokenBucket`.
+    /// Panics in debug builds if the `token` did not originate from this `TokenBucket`.
     #[must_use]
     pub fn word(&self, token: Token) -> &str {
-        assert_eq!(
+        #[cfg(debug_assertions)]
+        debug_assert_eq!(
             self.bucket_id, token.bucket_id,
             "Only Tokens from the same bucket may be compared!"
         );
@@ -111,21 +122,24 @@ impl Default for TokenBucket {
 
 /// A token pointing to a value in a [`TokenBucket`]
 ///
-/// The toeken is only valid for the [`TokenBucket`] that created it.
+/// The token is only valid for the [`TokenBucket`] that created it.
 ///
 /// # Panic
-/// Comparing two `Token`s from different [`TokenBucket`]s will cause a panic.
+/// Comparing two `Token`s from different [`TokenBucket`]s will cause a panic in debug builds.
 #[derive(Copy, Clone, Eq, Debug)]
 pub struct Token {
     id_in_bucket: TokenId,
+
+    #[cfg(debug_assertions)]
     bucket_id: NonZeroU32,
 }
 
 /// # Panic
-/// Comparing two `Token`s from different [`TokenBucket`]s will cause a panic.
+/// Comparing two `Token`s from different [`TokenBucket`]s will cause a panic in debug builds.
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
-        assert_eq!(
+        #[cfg(debug_assertions)]
+        debug_assert_eq!(
             self.bucket_id, other.bucket_id,
             "Only Tokens from the same bucket may be compared!"
         );

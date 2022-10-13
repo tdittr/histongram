@@ -3,9 +3,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use color_eyre::Result;
-use compact_str::CompactString;
 
-use histongram::{Histogram, Ngrams};
+use histongram::Ngrams;
 
 #[derive(Parser, Debug, Clone)]
 struct Args {
