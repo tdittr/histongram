@@ -10,6 +10,7 @@ use crate::{Histogram, WindowBuffer};
 type TokenHistoNgram<const N: usize> =
     Histogram<[Token; N], BuildHasherDefault<rustc_hash::FxHasher>>;
 
+#[derive(Debug)]
 pub enum MultiLenTokenHistoNgram {
     Empty,
     Dyn(

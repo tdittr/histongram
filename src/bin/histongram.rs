@@ -20,10 +20,11 @@ fn main() -> Result<()> {
 
     let data = read_to_string(args.file)?;
 
-    let ngrams = Ngrams::new(1..=5).count(data.split_whitespace());
+    let mut ngrams = Ngrams::new(1..=5);
+    ngrams.count(data.split_whitespace());
 
     if args.print {
-        println!("{ngrams:?}");
+        println!("{ngrams:#?}");
     }
 
     Ok(())

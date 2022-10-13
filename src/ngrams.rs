@@ -7,6 +7,7 @@ mod multi_token_histogram;
 pub mod window_buffer;
 
 /// A struct holding multiple `Histograms`
+#[derive(Debug)]
 pub struct Ngrams {
     token_bucket: TokenBucket,
     histograms: Vec<MultiLenTokenHistoNgram>,
