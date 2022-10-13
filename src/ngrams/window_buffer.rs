@@ -34,7 +34,7 @@ impl<T> WindowBuffer<T> {
     }
 
     /// Clear the current contents of the buffer, leaving only the overflow, than fill from `iter`.
-    pub fn refill(&mut self, iter: &mut impl Iterator<Item = T>) {
+    fn refill(&mut self, iter: &mut impl Iterator<Item = T>) {
         self.consume();
         self.fill(iter);
     }
@@ -84,10 +84,13 @@ impl<T> WindowBuffer<T> {
     /// assert_eq!(pairs[0], ["The", "quick"]);
     /// assert_eq!(quint[4], ["jumps", "over", "the", "lazy", "dog"]);
     /// ```
-    pub fn iterate<I>(mut self, mut iter: I, mut f: impl FnMut(&Self))
+    pub fn iterate<I>(mut self, iter: I, mut f: impl FnMut(&Self))
     where
         I: Iterator<Item = T>,
     {
+        // Fuse the iterator so we do not refill the buffer after we seen `None` once.
+        let mut iter = iter.fuse();
+
         loop {
             self.refill(&mut iter);
 

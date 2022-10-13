@@ -55,7 +55,7 @@ fn histo_for_len(len: usize) -> Box<dyn Histo> {
     match_len!((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16) => len)
 }
 
-trait Histo {
+trait Histo: Send + Sync {
     fn extend_from_buffer(&mut self, word_buffer: &WindowBuffer<Token>);
     fn array_len(&self) -> usize;
 }
