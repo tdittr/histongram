@@ -1,5 +1,4 @@
 use std::fs::read_to_string;
-use std::mem::size_of;
 use std::path::PathBuf;
 
 use clap::Parser;

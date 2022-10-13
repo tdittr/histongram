@@ -19,21 +19,22 @@ repository.workspace = true
 
 [features]
 default = []
-cli = ["dep:clap", "dep:color-eyre", "dep:compact_str", "dep:itertools"]
+cli = ["dep:clap", "dep:color-eyre", "dep:itertools"]
 serde = ["dep:serde", "hashbrown/serde"]
 
 [dependencies]
 hashbrown = "0.12.3"
+compact_str = "0.6.1"
 serde = { version = "1", optional = true }
 
 # CLI dependencies
 clap = { version = "4.0.2", features = ["derive"], optional = true }
 color-eyre = { version = "0.6.2", optional = true }
-compact_str = { version = "0.6.1", optional = true }
 itertools = { version = "0.10.5", optional = true }
 
 [dev-dependencies]
 insta = { version = "1.20.0", features = ["ron"] }
+proptest = "1.0.0"
 criterion = "0.4.0"
 ahash = "0.8.0"
 compact_str = "0.6.1"

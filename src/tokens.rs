@@ -1,9 +1,11 @@
 //! Structures for turning strings into tokens that can easily be copied
 
-use compact_str::CompactString;
-use hashbrown::HashMap;
+use std::hash::{Hash, Hasher};
 use std::num::NonZeroU32;
 use std::sync::atomic::{AtomicU32, Ordering};
+
+use compact_str::CompactString;
+use hashbrown::HashMap;
 
 type TokenId = NonZeroU32;
 
@@ -32,9 +34,10 @@ impl TokenBucket {
     ///
     /// This creates a new unique id for this bucket which will ensure that tokens from one bucket
     /// are not used with another bucket.
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            map: Default::default(),
+            map: HashMap::default(),
             bucket_id: new_bucket_id(),
         }
     }
@@ -58,6 +61,10 @@ impl TokenBucket {
     /// Look up the `word` that crated a [`Token`]
     ///
     /// This lookup is implemented as a linear search and thus has a complexity of `O(self.len())`.
+    ///
+    /// # Panics
+    /// Panics if the `token` did not originate from this `TokenBucket`.
+    #[must_use]
     pub fn word(&self, token: Token) -> &str {
         assert_eq!(
             self.bucket_id, token.bucket_id,
@@ -76,9 +83,16 @@ impl TokenBucket {
             .expect("There is an entry in map for every token we gave out")
     }
 
-    /// Return the current number of unique [`Token`]s created
+    /// Return the current number of unique [`Token`]s created.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.map.len()
+    }
+
+    /// Returns `false` as long as no tokens have been created.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn next_id(current_len: usize) -> TokenId {
@@ -101,7 +115,7 @@ impl Default for TokenBucket {
 ///
 /// # Panic
 /// Comparing two `Token`s from different [`TokenBucket`]s will cause a panic.
-#[derive(Copy, Clone, Eq, Hash, Debug)]
+#[derive(Copy, Clone, Eq, Debug)]
 pub struct Token {
     id_in_bucket: TokenId,
     bucket_id: NonZeroU32,
@@ -117,6 +131,12 @@ impl PartialEq for Token {
         );
 
         self.id_in_bucket == other.id_in_bucket
+    }
+}
+
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u32(self.id_in_bucket.into());
     }
 }
 
