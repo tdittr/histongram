@@ -1,16 +1,21 @@
 // This aligns all the tokens
 #![allow(clippy::zero_prefixed_literal)]
 
+use std::hash::BuildHasherDefault;
 use std::num::NonZeroUsize;
 
 use crate::tokens::Token;
 use crate::{Histogram, WindowBuffer};
 
-type TokenHistoNgram<const N: usize> = Histogram<[Token; N]>;
+type TokenHistoNgram<const N: usize> =
+    Histogram<[Token; N], BuildHasherDefault<rustc_hash::FxHasher>>;
 
 pub enum MultiLenTokenHistoNgram {
     Empty,
-    Dyn(NonZeroUsize, Histogram<Vec<Token>>),
+    Dyn(
+        NonZeroUsize,
+        Histogram<Vec<Token>, BuildHasherDefault<rustc_hash::FxHasher>>,
+    ),
     F01(TokenHistoNgram<01>),
     F02(TokenHistoNgram<02>),
     F03(TokenHistoNgram<03>),
@@ -35,23 +40,23 @@ impl MultiLenTokenHistoNgram {
         use MultiLenTokenHistoNgram::*;
         match len {
             00 => Empty,
-            01 => F01(TokenHistoNgram::new()),
-            02 => F02(TokenHistoNgram::new()),
-            03 => F03(TokenHistoNgram::new()),
-            04 => F04(TokenHistoNgram::new()),
-            05 => F05(TokenHistoNgram::new()),
-            06 => F06(TokenHistoNgram::new()),
-            07 => F07(TokenHistoNgram::new()),
-            08 => F08(TokenHistoNgram::new()),
-            09 => F09(TokenHistoNgram::new()),
-            10 => F10(TokenHistoNgram::new()),
-            11 => F11(TokenHistoNgram::new()),
-            12 => F12(TokenHistoNgram::new()),
-            13 => F13(TokenHistoNgram::new()),
-            14 => F14(TokenHistoNgram::new()),
-            15 => F15(TokenHistoNgram::new()),
-            16 => F16(TokenHistoNgram::new()),
-            other => Dyn(NonZeroUsize::new(other).unwrap(), Histogram::new()),
+            01 => F01(TokenHistoNgram::new_fxhash()),
+            02 => F02(TokenHistoNgram::new_fxhash()),
+            03 => F03(TokenHistoNgram::new_fxhash()),
+            04 => F04(TokenHistoNgram::new_fxhash()),
+            05 => F05(TokenHistoNgram::new_fxhash()),
+            06 => F06(TokenHistoNgram::new_fxhash()),
+            07 => F07(TokenHistoNgram::new_fxhash()),
+            08 => F08(TokenHistoNgram::new_fxhash()),
+            09 => F09(TokenHistoNgram::new_fxhash()),
+            10 => F10(TokenHistoNgram::new_fxhash()),
+            11 => F11(TokenHistoNgram::new_fxhash()),
+            12 => F12(TokenHistoNgram::new_fxhash()),
+            13 => F13(TokenHistoNgram::new_fxhash()),
+            14 => F14(TokenHistoNgram::new_fxhash()),
+            15 => F15(TokenHistoNgram::new_fxhash()),
+            16 => F16(TokenHistoNgram::new_fxhash()),
+            other => Dyn(NonZeroUsize::new(other).unwrap(), Histogram::new_fxhash()),
         }
     }
 

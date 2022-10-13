@@ -5,7 +5,7 @@ use clap::Parser;
 use color_eyre::Result;
 use compact_str::CompactString;
 
-use histongram::Histogram;
+use histongram::{Histogram, Ngrams};
 
 #[derive(Parser, Debug, Clone)]
 struct Args {
@@ -21,12 +21,10 @@ fn main() -> Result<()> {
 
     let data = read_to_string(args.file)?;
 
-    let hist: Histogram<CompactString> = data.split_whitespace().collect();
+    let ngrams = Ngrams::new(1..=5).count(data.split_whitespace());
 
     if args.print {
-        for (word, cnt) in hist.sorted_occurrences().into_iter().take(100) {
-            println!("{word:?}: {cnt}");
-        }
+        println!("{ngrams:?}");
     }
 
     Ok(())

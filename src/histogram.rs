@@ -1,10 +1,11 @@
 use std::borrow::Borrow;
 use std::cmp::Reverse;
-use std::hash::{BuildHasher, Hash};
+use std::hash::{BuildHasher, BuildHasherDefault, Hash};
 use std::iter;
 
 pub use hashbrown::hash_map::DefaultHashBuilder;
 use hashbrown::{hash_map, HashMap};
+use rustc_hash::FxHasher;
 
 /// A histogram that counts occurrences of `key`s.
 ///
@@ -134,6 +135,16 @@ impl<K: Hash + Eq> Histogram<K, DefaultHashBuilder> {
     /// ```
     pub fn from_counts(iter: impl IntoIterator<Item = (K, usize)>) -> Self {
         HashMap::from_iter(iter).into()
+    }
+}
+
+impl<K: Hash + Eq> Histogram<K, BuildHasherDefault<FxHasher>> {
+    /// Create a new empty `Histogram` with [`FxHasher`] as the hasher
+    #[must_use]
+    pub fn new_fxhash() -> Self {
+        Self {
+            map: HashMap::default(),
+        }
     }
 }
 
