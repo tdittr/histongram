@@ -13,5 +13,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 histongram = { path = ".." }
-pyo3 = { version = "0.17.1", features = ["extension-module", "abi3", "abi3-py37"] }
+pyo3 = { version = "0.18.0", features = ["extension-module", "abi3", "abi3-py37"] }
 compact_str = "0.6.1"
