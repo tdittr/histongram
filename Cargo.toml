@@ -29,7 +29,7 @@ serde = { version = "1", optional = true }
 insta = { version = "1.20.0", features = ["ron"] }
 criterion = "0.4.0"
 ahash = "0.8.0"
-compact_str = "0.6.1"
+compact_str = "0.7.0"
 rustc-hash = "1.1.0"
 
 [[bench]]
