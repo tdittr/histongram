@@ -20,7 +20,7 @@ impl Histogram {
     }
 
     pub fn add_many(&mut self, keys: &PyAny) -> PyResult<()> {
-        if keys.is_instance_of::<PyString>()? {
+        if keys.is_instance_of::<PyString>() {
             return Err(PyTypeError::new_err("Expected an iterator, got String. Use add() for adding single strings! If this is really what you want use iter(\"mystring\") to turn your String into an iterator."));
         }
 
