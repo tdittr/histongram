@@ -24,13 +24,11 @@ impl Histogram {
             return Err(PyTypeError::new_err("Expected an iterator, got String. Use add() for adding single strings! If this is really what you want use iter(\"mystring\") to turn your String into an iterator."));
         }
 
-        Python::with_gil(|py| {
-            for k in PyIterator::from_object(py, keys)? {
-                let k = PyAny::extract::<&str>(k?)?;
-                self.inner.add_ref(k);
-            }
-            Ok(())
-        })
+        for k in PyIterator::from_object(keys)? {
+            let k = PyAny::extract::<&str>(k?)?;
+            self.inner.add_ref(k);
+        }
+        Ok(())
     }
 
     pub fn __getitem__(&self, key: &str) -> usize {
